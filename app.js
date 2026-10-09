@@ -436,7 +436,7 @@
   function classSpellOptions(d, kind) {
     const lists = d.casting.lists;
     const alwaysNames = new Set(d.always.map((a) => a.name));
-    if (kind === "cantrips") return SPELLS.filter((s) => s.level === 0 && s.classes.some((x) => lists.includes(x)));
+    if (kind === "cantrips") return SPELLS.filter((s) => s.level === 0 && s.classes.some((x) => lists.includes(x)) && !alwaysNames.has(s.name));
     if (kind === "book") return SPELLS.filter((s) => s.level >= 1 && s.level <= d.maxSpellLevel && s.classes.some((x) => lists.includes(x)));
     if (kind === "prepared") {
       const pool = d.casting.spellbook
@@ -1310,7 +1310,10 @@
     const addTo = (name, tag) => {
       const s = SPELL_BY_NAME.get(name);
       if (!s) return;
-      (groups[s.level] = groups[s.level] || []).push({ s, tag });
+      const list = (groups[s.level] = groups[s.level] || []);
+      const existing = list.find((x) => x.s.name === name);
+      if (existing) { if (tag && !existing.tag.includes(tag)) existing.tag = existing.tag ? `${existing.tag} · ${tag}` : tag; return; }
+      list.push({ s, tag });
     };
     if (d.casting) {
       c.spells.cantrips.forEach((n) => addTo(n, ""));
