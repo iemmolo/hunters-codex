@@ -815,11 +815,11 @@
   function stepChoices(c, level) {
     const insts = choiceInstances(c, c.level).filter((i) => i.level === level || !instDone(c, i));
     if (!insts.length) return `<section class="card"><p>No choices to make at this level.</p></section>`;
-    return insts.map((inst) => renderChoice(c, inst)).join("");
+    const d = derive(c); // compute once; derive() is not cheap
+    return insts.map((inst) => renderChoice(c, inst, d)).join("");
   }
 
-  function renderChoice(c, inst) {
-    const d = derive(c);
+  function renderChoice(c, inst, d) {
     const def = inst.def;
     const vals = c.choices[inst.key] || [];
     const full = vals.length >= inst.need;
@@ -980,9 +980,9 @@
       const open = state.openSpells.has(listId + "::" + s.name);
       return `<li class="spell ${sel ? "sel" : ""}" data-name="${esc(s.name.toLowerCase())}">
         <button type="button" class="spell-check" data-act="${opt.act}" ${opt.key ? `data-key="${esc(opt.key)}"` : ""} ${opt.kind ? `data-kind="${opt.kind}"` : ""} data-need="${opt.need}" data-value="${esc(s.name)}" ${!sel && full && opt.need !== 1 ? "disabled" : ""} aria-pressed="${sel}">${sel ? "✓" : ""}</button>
-        <details data-open-key="${esc(listId + "::" + s.name)}" ${open ? "open" : ""}>
+        <details data-open-key="${esc(listId + "::" + s.name)}" data-spell="${esc(s.name)}" ${open ? "open" : ""}>
           <summary><span class="spell-name">${esc(s.name)}</span><span class="spell-meta">${s.level ? ordinal(s.level) : "Cantrip"} · ${esc(s.school)}${s.conc ? " · C" : ""}${s.ritual ? " · R" : ""}</span></summary>
-          ${spellBody(s)}
+          ${open ? spellBody(s) : ""}
         </details>
       </li>`;
     }).join("");
@@ -1870,6 +1870,9 @@
     const key = e.target.dataset && e.target.dataset.openKey;
     if (!key) return;
     if (e.target.open) state.openSpells.add(key); else state.openSpells.delete(key);
+    // Spell text is only rendered when a card is opened (keeps long lists fast).
+    const spell = SPELL_BY_NAME.get(e.target.dataset.spell || "");
+    if (e.target.open && spell && !e.target.querySelector(".spell-body")) e.target.insertAdjacentHTML("beforeend", spellBody(spell));
   }, true);
 
   // Re-render only the footer of the creation wizard while typing the name (keeps focus).
